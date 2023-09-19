@@ -6,8 +6,8 @@ import numpy as np
 import pytest
 
 from brightness_patch_detector.brightness_path_detector import get_top_patches, get_area_of_quadrilateral, \
-    draw_and_save, get_average_brightness, get_patches, get_shoelace_formula_result, get_sorted_patches, \
-    compute_centroid, order_points, get_grid, get_selected_patches
+    draw_and_save, get_average_brightness, get_patch_centers_and_brightness, get_area_using_shoelace, get_patches_sorted_by_brightness, \
+    get_centroid, get_points_sort_around_centroid, get_grid, get_selected_patches
 
 NUMBER_PATCHES = 4
 KERNEL_SIZE = 5
@@ -38,12 +38,12 @@ def test_get_average_brightness(exemplary_image):
 
 def test_get_patches(exemplary_image):
     height, width = exemplary_image.shape
-    patches = get_patches(exemplary_image, height, width)
+    patches = get_patch_centers_and_brightness(exemplary_image, height, width)
     assert len(patches) == (height - KERNEL_SIZE) * (width - KERNEL_SIZE)
 
 
 def test_sorted_patches(exemplary_image):
-    sorted_patches = get_sorted_patches(exemplary_image, 100, 100)
+    sorted_patches = get_patches_sorted_by_brightness(exemplary_image, 100, 100)
 
     brightness_values = [patch[1] for patch in sorted_patches]
     assert all(brightness_values[i] >= brightness_values[i + 1] for i in range(len(brightness_values) - 1))
@@ -52,17 +52,17 @@ def test_sorted_patches(exemplary_image):
 def test_compute_centroid():
     square = np.array([[0, 0], [0, 2], [2, 2], [2, 0]])
 
-    centroid = compute_centroid(square)
+    centroid = get_centroid(square)
     assert np.allclose(centroid, [1, 1]), f"Expected [1, 1], but got {centroid}"
 
     triangle = np.array([[0, 0], [0, 2], [2, 0]])
 
-    centroid = compute_centroid(triangle)
+    centroid = get_centroid(triangle)
     expected_centroid = [2 / 3, 2 / 3]
     assert np.allclose(centroid, expected_centroid), f"Expected {expected_centroid}, but got {centroid}"
 
     random_points = np.random.rand(10, 2)
-    centroid = compute_centroid(random_points)
+    centroid = get_centroid(random_points)
 
     assert centroid.shape == (2,), "Centroid should have 2 coordinates"
     assert 0 <= centroid[0] <= 1, "Centroid x-coordinate out of bounds"
@@ -72,7 +72,7 @@ def test_compute_centroid():
 def test_order_points():
     square = np.array([[2, 2], [0, 0], [2, 0], [0, 2]])
 
-    ordered_square = order_points(square)
+    ordered_square = get_points_sort_around_centroid(square)
     expected_order = np.array([[0, 0],
                                [2, 0],
                                [2, 2],
@@ -81,7 +81,7 @@ def test_order_points():
 
     triangle = np.array([[0, 2], [2, 0], [0, 0]])
 
-    ordered_triangle = order_points(triangle)
+    ordered_triangle = get_points_sort_around_centroid(triangle)
     expected_order = np.array([[0, 0],
                                [2, 0],
                                [0, 2]])
@@ -89,17 +89,17 @@ def test_order_points():
 
     points = np.random.rand(5, 2)
 
-    ordered_points = order_points(points)
-    centroid = compute_centroid(points)
+    ordered_points = get_points_sort_around_centroid(points)
+    centroid = get_centroid(points)
     angles = np.arctan2(ordered_points[:, 1] - centroid[1], ordered_points[:, 0] - centroid[0])
 
     assert all(angles[i] <= angles[i + 1] for i in range(len(angles) - 1)), "Points are not ordered counter-clockwise"
 
 
 def test_get_selected_patches(exemplary_image):
-    sorted_patches = get_sorted_patches(image=exemplary_image,
-                                        height=exemplary_image.shape[0],
-                                        width=exemplary_image.shape[1])
+    sorted_patches = get_patches_sorted_by_brightness(image=exemplary_image,
+                                                      height=exemplary_image.shape[0],
+                                                      width=exemplary_image.shape[1])
 
     grid = get_grid(height=exemplary_image.shape[0], width=exemplary_image.shape[1])
     selected_patches = get_selected_patches(sorted_patches=sorted_patches,
@@ -114,9 +114,9 @@ def test_get_selected_patches(exemplary_image):
     exemplary_image[85:90, 10:15] = 255
     exemplary_image[85:90, 85:90] = 255
 
-    sorted_patches = get_sorted_patches(image=exemplary_image,
-                                        height=exemplary_image.shape[0],
-                                        width=exemplary_image.shape[1])
+    sorted_patches = get_patches_sorted_by_brightness(image=exemplary_image,
+                                                      height=exemplary_image.shape[0],
+                                                      width=exemplary_image.shape[1])
 
     grid = get_grid(height=exemplary_image.shape[0], width=exemplary_image.shape[1])
     selected_patches = get_selected_patches(sorted_patches=sorted_patches,
@@ -124,7 +124,9 @@ def test_get_selected_patches(exemplary_image):
                                             height=exemplary_image.shape[0],
                                             width=exemplary_image.shape[1])
 
-    expected_patches = [[12, 12], [12, 87], [87, 12],]
+    expected_patches = [[12, 12],
+                        [12, 87],
+                        [87, 12],]
     assert all([patch in selected_patches.tolist() for patch in
                 expected_patches]), f"Expected patches not found in selected patches"
 
@@ -140,11 +142,11 @@ def test_get_grid(exemplary_image):
 
 
 def test_get_top_patches(exemplary_image):
-    patches = get_top_patches(exemplary_image)
+    top_patches = get_top_patches(exemplary_image)
     exemplary_patches = (47, 47)
 
-    assert len(patches) == NUMBER_PATCHES
-    assert exemplary_patches in patches
+    assert len(top_patches) == NUMBER_PATCHES
+    assert exemplary_patches in top_patches
 
 
 def test_get_shoelace_formula_result():
@@ -152,21 +154,21 @@ def test_get_shoelace_formula_result():
     x_coordinates = np.array([1, 1, 3, 3])
     y_coordinates = np.array([1, 3, 3, 1])
 
-    area = get_shoelace_formula_result(x_coordinates, y_coordinates)
+    area = get_area_using_shoelace(x_coordinates, y_coordinates)
     assert area == square_area, f"Expected 4, but got {square_area}"
 
     rectangle_area = 12.0
     x_coordinates = np.array([2, 2, 6, 6])
     y_coordinates = np.array([1, 4, 4, 1])
 
-    area = get_shoelace_formula_result(x_coordinates, y_coordinates)
+    area = get_area_using_shoelace(x_coordinates, y_coordinates)
     assert area == rectangle_area, f"Expected 12, but got {rectangle_area}"
 
     triangle_area = 6.0
     x_coordinates = np.array([1, 1, 5])
     y_coordinates = np.array([1, 4, 1])
 
-    area = get_shoelace_formula_result(x_coordinates, y_coordinates)
+    area = get_area_using_shoelace(x_coordinates, y_coordinates)
     assert area == triangle_area, f"Expected 6, but got {triangle_area}"
 
 
@@ -182,10 +184,10 @@ def test_draw_and_save(exemplary_image):
     quadrilateral_corners = np.array([[10, 10], [90, 10], [90, 90], [10, 90]])
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        output_file_path = os.path.join(temp_dir, "output_1.png")
+        output_file_path = os.path.join(temp_dir, "output.png")
         draw_and_save(exemplary_image, quadrilateral_corners, output_file_path)
-        saved_img = cv2.imread(output_file_path)
-        red_pixels = (saved_img[:, :, 2] == 255) & (saved_img[:, :, 1] == 0) & (saved_img[:, :, 0] == 0)
+        saved_image = cv2.imread(output_file_path)
+        red_pixels = (saved_image[:, :, 2] == 255) & (saved_image[:, :, 1] == 0) & (saved_image[:, :, 0] == 0)
 
         assert np.any(red_pixels), "The quadrilateral does not seem to be drawn on the image."
 

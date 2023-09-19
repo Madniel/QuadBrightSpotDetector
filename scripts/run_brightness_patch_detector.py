@@ -15,7 +15,7 @@ if __name__ == "__main__":
         :param output_path: Path to the output image file.
         """
     if len(sys.argv) != 3:
-        print("Usage: python brightness_patch_detector.py <path_to_image>")
+        print("Usage: python brightness_patch_detector.py <path_to_image> <output_image_path>")
         sys.exit(1)
 
     parser = argparse.ArgumentParser(description="Command line arguments demo")
@@ -28,7 +28,7 @@ if __name__ == "__main__":
     # Define the optional argument with a default value
     parser.add_argument("output_path",
                         type=str,
-                        default="output_1.png",
+                        default="output.png",
                         help="Path to the output image file")
 
     args = parser.parse_args()
