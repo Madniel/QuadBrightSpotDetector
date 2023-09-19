@@ -12,7 +12,7 @@ MIN_DISTANCE = 1
 
 
 def get_average_brightness(image: np.ndarray, x: int, y: int) -> float:
-    return np.mean(image[y:y + KERNEL_SIZE, x:x + KERNEL_SIZE]).astype(np.float32)
+    return float(np.mean(image[y:y + KERNEL_SIZE, x:x + KERNEL_SIZE]))
 
 
 def get_patches(image: np.ndarray, height: int, width: int) -> List:
