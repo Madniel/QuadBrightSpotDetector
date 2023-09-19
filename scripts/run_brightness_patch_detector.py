@@ -22,12 +22,12 @@ if __name__ == "__main__":
 
     # Define the obligatory argument
     parser.add_argument("image_path",
-                        type=Path,
+                        type=str,
                         help="Path to the input image file")
 
     # Define the optional argument with a default value
     parser.add_argument("output_path",
-                        type=Path,
+                        type=str,
                         default="output.png",
                         help="Path to the output image file")
 
