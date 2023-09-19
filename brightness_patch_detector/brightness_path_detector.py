@@ -8,6 +8,7 @@ KERNEL_SIZE = 5
 NUMBER_PATCHES = 4
 PATCH_CENTER_OFFSET = KERNEL_SIZE // 2
 
+
 def get_average_brightness(image: np.ndarray, x: int, y: int) -> float:
     return np.mean(image[y:y + KERNEL_SIZE, x:x + KERNEL_SIZE]).astype(np.float32)
 
@@ -24,18 +25,23 @@ def get_sorted_patches(image: np.ndarray, height: int, width: int) -> List:
 
 
 def get_selected_patches(sorted_patches: List, grid: np.ndarray, height: int, width: int) -> np.ndarray:
-    selected_patches = np.empty((0, PATCH_CENTER_OFFSET), int)  # Initialize an empty numpy array
-    for patch in sorted_patches:
-        coord, _ = patch
+    selected_coordinates = []  # Use a temporary list for appending
+
+    for coord, _ in sorted_patches:  # Direct unpacking in the loop header for clarity
         grid_x = coord[0] // KERNEL_SIZE
         grid_y = coord[1] // KERNEL_SIZE
+
         if not grid[grid_y, grid_x]:  # if the cell is not occupied
-            selected_patches = np.vstack([selected_patches, np.array([coord])])  # Stack the new coordinate
-            grid[max(grid_y - 1, 0):min(grid_y + PATCH_CENTER_OFFSET, height // KERNEL_SIZE),
-            max(grid_x - 1, 0):min(grid_x + PATCH_CENTER_OFFSET, width // KERNEL_SIZE)] = True
-            if selected_patches.shape[0] == NUMBER_PATCHES:
+            selected_coordinates.append(coord)
+
+            y_start, y_end = max(grid_y - 1, 0), min(grid_y + PATCH_CENTER_OFFSET, height // KERNEL_SIZE)
+            x_start, x_end = max(grid_x - 1, 0), min(grid_x + PATCH_CENTER_OFFSET, width // KERNEL_SIZE)
+            grid[y_start:y_end, x_start:x_end] = True
+
+            if len(selected_coordinates) == NUMBER_PATCHES:
                 break
-    return selected_patches
+
+    return np.array(selected_coordinates, dtype=int)
 
 
 def get_grid(height: int, width: int) -> np.ndarray:
