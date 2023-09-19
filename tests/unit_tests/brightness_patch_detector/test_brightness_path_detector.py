@@ -32,7 +32,7 @@ def test_get_average_brightness(exemplary_image):
     brightness = get_average_brightness(exemplary_image, 44, 41)
     number_white_pixels = 4
     area = KERNEL_SIZE * KERNEL_SIZE
-    expected_value_mixed_patch = 255 * number_white_pixels / area  # Only 4 pixels out of the 25 are white.
+    expected_value_mixed_patch = 255 * number_white_pixels / area
     assert brightness == expected_value_mixed_patch, f"Expected {expected_value_mixed_patch}, but got {brightness}"
 
 
