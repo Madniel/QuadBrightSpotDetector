@@ -1,19 +1,30 @@
+import tempfile
+from pathlib import Path
+
 import cv2
 import numpy as np
+
 from brightness_patch_detector.brightness_path_detector import process_image
 
-def test_integration():
-    # 1. Load an image (Use a test image, preferably white 100x100 for simplicity)
-    img_path = 'tests/test_images/test_image.jpg'
-    original_img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
 
-    # 2. Process the image
-    processed_path = 'tests/test_images/output_test_image.png'
-    process_image(img_path, output_file_path=processed_path)
-    processed_img = cv2.imread(processed_path, cv2.IMREAD_GRAYSCALE)
+def test_process_image():
+    resources_path = Path(__file__).parent.parent.parent / "resources" / "brightness_patch_detector"
+    test_image_path = resources_path / "image.jpg"
+    ground_truth_path = resources_path / "output_ground_truth.png"
 
-    # 3. Verify the changes. We'll check if the processed image has some red pixels.
-    # Remember, when reading with OpenCV in grayscale, red pixels might not necessarily have a value of 255 due to the color conversion.
-    # For simplicity, if the average brightness of the processed image is greater than the original,
-    # we can assume that a brighter quadrilateral was drawn on it.
-    assert np.mean(processed_img) > np.mean(original_img), "The processed image does not seem to have the expected changes."
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_directory = Path(temp_dir)
+        test_output_path = temp_directory / "output.png"
+
+        process_image(str(test_image_path), str(test_output_path))
+
+        assert test_output_path.exists(), f"Output image not saved at {test_output_path}"
+
+        processed_img = cv2.imread(str(test_output_path))
+        ground_truth_img = cv2.imread(str(ground_truth_path))
+
+        assert processed_img is not None, "Unable to load the processed image."
+        assert ground_truth_img is not None, "Unable to load the ground truth image."
+
+        difference = np.abs(processed_img.astype(int) - ground_truth_img.astype(int))
+        assert np.sum(difference) == 0, "Processed image differs from the ground truth."

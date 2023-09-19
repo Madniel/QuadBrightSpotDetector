@@ -28,7 +28,7 @@ if __name__ == "__main__":
     # Define the optional argument with a default value
     parser.add_argument("output_path",
                         type=str,
-                        default="output.png",
+                        default="output_1.png",
                         help="Path to the output image file")
 
     args = parser.parse_args()
