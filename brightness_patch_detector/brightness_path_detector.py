@@ -182,7 +182,7 @@ def draw_and_save(image: np.ndarray, points: np.ndarray, output_path: str) -> No
 
 
 @error_handler
-def detect_and_draw_quadrilateral(image_path: str, output_path: str) -> float:
+def draw_quadrilateral_and_calculate_area(image_path: str, output_path: str) -> float:
     """
     Process an image to detect, compute area, and visualize top bright patches.
 

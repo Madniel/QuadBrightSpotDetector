@@ -4,10 +4,10 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from brightness_patch_detector.brightness_path_detector import detect_and_draw_quadrilateral
+from brightness_patch_detector.brightness_path_detector import draw_quadrilateral_and_calculate_area
 
 
-def test_process_image():
+def test_draw_quadrilateral_and_calculate_area():
     resources_path = Path(__file__).parent.parent.parent / "resources" / "brightness_patch_detector"
     test_image_path = resources_path / "image.jpg"
     path_ground_truth = resources_path / "output_ground_truth.png"
@@ -17,7 +17,7 @@ def test_process_image():
         temp_directory = Path(temp_dir)
         test_output_path = temp_directory / "output.png"
 
-        calculated_area = detect_and_draw_quadrilateral(str(test_image_path), str(test_output_path))
+        calculated_area = draw_quadrilateral_and_calculate_area(str(test_image_path), str(test_output_path))
 
         assert test_output_path.exists(), f"Output image not saved at {test_output_path}"
 

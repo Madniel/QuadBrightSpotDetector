@@ -8,7 +8,7 @@ import pytest
 from brightness_patch_detector.brightness_path_detector import get_top_patches, get_area_of_quadrilateral, \
     draw_and_save, get_average_brightness, get_patch_centers_and_brightness, get_area_using_shoelace_formula, \
     get_patches_sorted_by_brightness, \
-    get_centroid, get_points_sort_around_centroid, get_grid, get_selected_patches, detect_and_draw_quadrilateral
+    get_centroid, get_points_sort_around_centroid, get_grid, get_selected_patches, draw_quadrilateral_and_calculate_area
 
 NUMBER_PATCHES = 4
 KERNEL_SIZE = 5
@@ -189,14 +189,14 @@ def test_draw_and_save(exemplary_image):
         assert np.any(red_pixels), "The quadrilateral does not seem to be drawn on the image."
 
 
-def test_detect_and_draw_quadrilateral(exemplary_image):
+def test_draw_quadrilateral_and_calculate_area(exemplary_image):
     with tempfile.TemporaryDirectory() as temp_dir:
         input_file_path = os.path.join(temp_dir, "input.png")
         output_file_path = os.path.join(temp_dir, "output.png")
         area_ground_truth = 1980.0
         cv2.imwrite(input_file_path, exemplary_image)
 
-        calculated_area = detect_and_draw_quadrilateral(input_file_path, output_file_path)
+        calculated_area = draw_quadrilateral_and_calculate_area(input_file_path, output_file_path)
         saved_img = cv2.imread(output_file_path)
 
         red_pixels = (saved_img[:, :, 2] == 255) & (saved_img[:, :, 1] == 0) & (saved_img[:, :, 0] == 0)

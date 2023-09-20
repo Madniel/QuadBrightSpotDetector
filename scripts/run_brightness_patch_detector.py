@@ -3,7 +3,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from brightness_patch_detector.brightness_path_detector import detect_and_draw_quadrilateral
+from brightness_patch_detector.brightness_path_detector import draw_quadrilateral_and_calculate_area
 
 if __name__ == "__main__":
     """
@@ -34,5 +34,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     image_path = args.image_path
     output_path = args.output_path
-    calculated_area = detect_and_draw_quadrilateral(image_path, output_path)
+    calculated_area = draw_quadrilateral_and_calculate_area(image_path, output_path)
     print("Area of the quadrilateral:", calculated_area)
