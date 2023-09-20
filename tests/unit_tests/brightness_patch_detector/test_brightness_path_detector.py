@@ -6,8 +6,9 @@ import numpy as np
 import pytest
 
 from brightness_patch_detector.brightness_path_detector import get_top_patches, get_area_of_quadrilateral, \
-    draw_and_save, get_average_brightness, get_patch_centers_and_brightness, get_area_using_shoelace, get_patches_sorted_by_brightness, \
-    get_centroid, get_points_sort_around_centroid, get_grid, get_selected_patches
+    draw_and_save, get_average_brightness, get_patch_centers_and_brightness, get_area_using_shoelace_formula, \
+    get_patches_sorted_by_brightness, \
+    get_centroid, get_points_sort_around_centroid, get_grid, get_selected_patches, process_image
 
 NUMBER_PATCHES = 4
 KERNEL_SIZE = 5
@@ -36,20 +37,22 @@ def test_get_average_brightness(exemplary_image):
     assert brightness == expected_value_mixed_patch, f"Expected {expected_value_mixed_patch}, but got {brightness}"
 
 
-def test_get_patches(exemplary_image):
+def test_get_patch_centers_and_brightness(exemplary_image):
     height, width = exemplary_image.shape
     patches = get_patch_centers_and_brightness(exemplary_image, height, width)
-    assert len(patches) == (height - KERNEL_SIZE) * (width - KERNEL_SIZE)
+    number_patches_ground_truth = len(patches)
+    number_patches = (height - KERNEL_SIZE) * (width - KERNEL_SIZE)
+    assert number_patches_ground_truth == number_patches
 
 
-def test_sorted_patches(exemplary_image):
+def test_get_patches_sorted_by_brightness(exemplary_image):
     sorted_patches = get_patches_sorted_by_brightness(exemplary_image, 100, 100)
 
     brightness_values = [patch[1] for patch in sorted_patches]
     assert all(brightness_values[i] >= brightness_values[i + 1] for i in range(len(brightness_values) - 1))
 
 
-def test_compute_centroid():
+def test_get_centroid():
     square = np.array([[0, 0], [0, 2], [2, 2], [2, 0]])
 
     centroid = get_centroid(square)
@@ -69,7 +72,7 @@ def test_compute_centroid():
     assert 0 <= centroid[1] <= 1, "Centroid y-coordinate out of bounds"
 
 
-def test_order_points():
+def test_get_points_sort_around_centroid():
     square = np.array([[2, 2], [0, 0], [2, 0], [0, 2]])
 
     ordered_square = get_points_sort_around_centroid(square)
@@ -107,7 +110,9 @@ def test_get_selected_patches(exemplary_image):
                                             height=exemplary_image.shape[0],
                                             width=exemplary_image.shape[1])
 
-    assert [47, 47] in selected_patches.tolist(), "Expected center patch to be selected"
+    expected_center_patch = np.array([47, 47])
+
+    assert np.all(np.isin(expected_center_patch, selected_patches)), "Expected center patch to be selected"
 
     exemplary_image[10:15, 10:15] = 255
     exemplary_image[10:15, 85:90] = 255
@@ -124,11 +129,11 @@ def test_get_selected_patches(exemplary_image):
                                             height=exemplary_image.shape[0],
                                             width=exemplary_image.shape[1])
 
-    expected_patches = [[12, 12],
-                        [12, 87],
-                        [87, 12],]
-    assert all([patch in selected_patches.tolist() for patch in
-                expected_patches]), f"Expected patches not found in selected patches"
+    expected_patches = np.array([[12, 12],
+                                 [12, 87],
+                                 [87, 12],
+                                 [47, 47]])
+    assert np.all(np.isin(expected_patches, selected_patches)), f"Expected patches not found in selected patches"
 
 
 def test_get_grid(exemplary_image):
@@ -143,41 +148,44 @@ def test_get_grid(exemplary_image):
 
 def test_get_top_patches(exemplary_image):
     top_patches = get_top_patches(exemplary_image)
-    exemplary_patches = (47, 47)
+    exemplary_patch = (47, 47)
+    number_top_patches = len(top_patches)
 
-    assert len(top_patches) == NUMBER_PATCHES
-    assert exemplary_patches in top_patches
+    assert number_top_patches == NUMBER_PATCHES
+    assert exemplary_patch in top_patches
 
 
-def test_get_shoelace_formula_result():
+def test_get_area_using_shoelace_formula():
     square_area = 4.0
     x_coordinates = np.array([1, 1, 3, 3])
     y_coordinates = np.array([1, 3, 3, 1])
 
-    area = get_area_using_shoelace(x_coordinates, y_coordinates)
+    area = get_area_using_shoelace_formula(x_coordinates, y_coordinates)
     assert area == square_area, f"Expected 4, but got {square_area}"
 
     rectangle_area = 12.0
     x_coordinates = np.array([2, 2, 6, 6])
     y_coordinates = np.array([1, 4, 4, 1])
 
-    area = get_area_using_shoelace(x_coordinates, y_coordinates)
+    area = get_area_using_shoelace_formula(x_coordinates, y_coordinates)
     assert area == rectangle_area, f"Expected 12, but got {rectangle_area}"
 
     triangle_area = 6.0
     x_coordinates = np.array([1, 1, 5])
     y_coordinates = np.array([1, 4, 1])
 
-    area = get_area_using_shoelace(x_coordinates, y_coordinates)
+    area = get_area_using_shoelace_formula(x_coordinates, y_coordinates)
     assert area == triangle_area, f"Expected 6, but got {triangle_area}"
 
 
 def test_area_of_quadrilateral():
     square_corners = np.array([[0, 0], [0, 2], [2, 2], [2, 0]])
-    assert get_area_of_quadrilateral(square_corners) == 4.0
+    square_area_ground_truth = 4.0
+    assert get_area_of_quadrilateral(square_corners) == square_area_ground_truth
 
     rectangle_corners = np.array([[0, 0], [0, 2], [1, 2], [1, 0]])
-    assert get_area_of_quadrilateral(rectangle_corners) == 2.0
+    rectangle_area_ground_truth = 2.0
+    assert get_area_of_quadrilateral(rectangle_corners) == rectangle_area_ground_truth
 
 
 def test_draw_and_save(exemplary_image):
@@ -192,4 +200,15 @@ def test_draw_and_save(exemplary_image):
         assert np.any(red_pixels), "The quadrilateral does not seem to be drawn on the image."
 
 
+def test_process_image(exemplary_image):
+    with tempfile.TemporaryDirectory() as temp_dir:
+        input_file_path = os.path.join(temp_dir, "input.png")
+        output_file_path = os.path.join(temp_dir, "output.png")
 
+        cv2.imwrite(input_file_path, exemplary_image)
+
+        process_image(input_file_path, output_file_path)
+        saved_img = cv2.imread(output_file_path)
+
+        red_pixels = (saved_img[:, :, 2] == 255) & (saved_img[:, :, 1] == 0) & (saved_img[:, :, 0] == 0)
+        assert np.any(red_pixels), "The quadrilateral does not seem to be drawn on the image."

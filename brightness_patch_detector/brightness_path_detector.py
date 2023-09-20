@@ -73,7 +73,7 @@ def get_top_patches(image: np.ndarray) -> np.ndarray:
                                 width=width, )
 
 
-def get_area_using_shoelace(x_coordinates: np.ndarray, y_coordinates: np.ndarray) -> float:
+def get_area_using_shoelace_formula(x_coordinates: np.ndarray, y_coordinates: np.ndarray) -> float:
     forward_diagonal_product = x_coordinates * np.roll(y_coordinates, -1)
     backward_diagonal_product = y_coordinates * np.roll(x_coordinates, -1)
 
@@ -84,7 +84,7 @@ def get_area_of_quadrilateral(points: np.ndarray) -> float:
     height_coordinates = points[:, 0]
     width_coordinates = points[:, 1]
 
-    return get_area_using_shoelace(height_coordinates, width_coordinates)
+    return get_area_using_shoelace_formula(height_coordinates, width_coordinates)
 
 
 def draw_and_save(image: np.ndarray, points: np.ndarray, output_path: str) -> None:
