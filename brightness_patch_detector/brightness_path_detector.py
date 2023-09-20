@@ -188,6 +188,7 @@ def draw_quadrilateral_and_calculate_area(image_path: str, output_path: str) -> 
 
     :param image_path: Path to the input image.
     :param output_path: Path to save the processed image.
+    :return: Area of the quadrilateral.
     """
     gray_image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
 
