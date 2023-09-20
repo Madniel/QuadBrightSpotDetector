@@ -106,7 +106,7 @@ def get_selected_patches(sorted_patches: List, grid: np.ndarray, height: int, wi
 
             if num_selected == NUM_TOP_BRIGHT_PATCHES:
                 break
-
+    selected_coordinates = selected_coordinates[:num_selected]
     return get_points_sort_around_centroid(selected_coordinates)
 
 
