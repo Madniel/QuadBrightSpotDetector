@@ -83,3 +83,26 @@ python brightness_patch_detector.py <path_to_image> <output_image_path>
 - **output_image_path**: The path where you'd like to save the resulting image. If this is not provided, the default is
   **output.png**.
 
+## 🛠 **Unit Tests**
+
+Unit tests focus on individual components, ensuring their proper functionality. Our suite covers:
+
+1. **Average Brightness**: Gauging average patch brightness.
+2. **Patch Insights**: Extracting center locations & brightness values.
+3. **Brightness Sorting**: Arranging patches by brightness level.
+4. **Centroid Mechanics**: Accurate centroid computations.
+5. **Centroid-Based Sorting**: Points sorted counter-clockwise around centroids.
+6. **Patch Selection**: Filtering patches by brightness & position.
+7. **Grid Dynamics**: Grid formulation based on image dimensions.
+8. **Brightness Elites**: Identifying top patches.
+9. **Area Analysis**: Quadrilateral and shoelace formula-based calculations.
+10. **Final Visualization**: Drawing quadrilaterals & saving outputs.
+
+---
+
+## 🌐 **Integral Test**
+
+A test, simulating real-world usage:
+- **End-to-End Image Processing**: Processes images, detects brightness patches, and verifies outputs against established ground truths.
+
+---
