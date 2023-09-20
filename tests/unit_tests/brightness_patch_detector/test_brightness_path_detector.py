@@ -8,7 +8,7 @@ import pytest
 from brightness_patch_detector.brightness_path_detector import get_top_patches, get_area_of_quadrilateral, \
     draw_and_save, get_average_brightness, get_patch_centers_and_brightness, get_area_using_shoelace_formula, \
     get_patches_sorted_by_brightness, \
-    get_centroid, get_points_sort_around_centroid, get_grid, get_selected_patches, process_image
+    get_centroid, get_points_sort_around_centroid, get_grid, get_selected_patches, detect_and_draw_quadrilateral
 
 NUMBER_PATCHES = 4
 KERNEL_SIZE = 5
@@ -39,14 +39,14 @@ def test_get_average_brightness(exemplary_image):
 
 def test_get_patch_centers_and_brightness(exemplary_image):
     height, width = exemplary_image.shape
-    patches = get_patch_centers_and_brightness(exemplary_image, height, width)
+    patches = get_patch_centers_and_brightness(exemplary_image)
     number_patches_ground_truth = len(patches)
     number_patches = (height - KERNEL_SIZE) * (width - KERNEL_SIZE)
     assert number_patches_ground_truth == number_patches
 
 
 def test_get_patches_sorted_by_brightness(exemplary_image):
-    sorted_patches = get_patches_sorted_by_brightness(exemplary_image, 100, 100)
+    sorted_patches = get_patches_sorted_by_brightness(exemplary_image)
 
     brightness_values = [patch[1] for patch in sorted_patches]
     assert all(brightness_values[i] >= brightness_values[i + 1] for i in range(len(brightness_values) - 1))
@@ -101,15 +101,9 @@ def test_get_points_sort_around_centroid():
 
 
 def test_get_selected_patches(exemplary_image):
-    sorted_patches = get_patches_sorted_by_brightness(image=exemplary_image,
-                                                      height=exemplary_image.shape[0],
-                                                      width=exemplary_image.shape[1])
+    sorted_patches = get_patches_sorted_by_brightness(image=exemplary_image)
 
-    grid = get_grid(height=exemplary_image.shape[0], width=exemplary_image.shape[1])
-    selected_patches = get_selected_patches(sorted_patches=sorted_patches,
-                                            grid=grid,
-                                            height=exemplary_image.shape[0],
-                                            width=exemplary_image.shape[1])
+    selected_patches = get_selected_patches(sorted_patches=sorted_patches)
 
     expected_center_patch = np.array([47, 47])
 
@@ -120,15 +114,9 @@ def test_get_selected_patches(exemplary_image):
     exemplary_image[85:90, 10:15] = 255
     exemplary_image[85:90, 85:90] = 255
 
-    sorted_patches = get_patches_sorted_by_brightness(image=exemplary_image,
-                                                      height=exemplary_image.shape[0],
-                                                      width=exemplary_image.shape[1])
+    sorted_patches = get_patches_sorted_by_brightness(image=exemplary_image)
 
-    grid = get_grid(height=exemplary_image.shape[0], width=exemplary_image.shape[1])
-    selected_patches = get_selected_patches(sorted_patches=sorted_patches,
-                                            grid=grid,
-                                            height=exemplary_image.shape[0],
-                                            width=exemplary_image.shape[1])
+    selected_patches = get_selected_patches(sorted_patches=sorted_patches)
 
     expected_patches = np.array([[12, 12],
                                  [12, 87],
@@ -138,12 +126,12 @@ def test_get_selected_patches(exemplary_image):
 
 
 def test_get_grid(exemplary_image):
-    grid = get_grid(height=exemplary_image.shape[0], width=exemplary_image.shape[1])
+    grid = get_grid(exemplary_image)
 
     expected_shape = (exemplary_image.shape[0] // KERNEL_SIZE, exemplary_image.shape[1] // KERNEL_SIZE)
     assert grid.shape == expected_shape, f"Expected shape: {expected_shape}, but got: {grid.shape}"
 
-    grid = get_grid(height=exemplary_image.shape[0], width=exemplary_image.shape[1])
+    grid = get_grid(exemplary_image)
     assert not np.any(grid), "Grid should consist of all False values"
 
 
@@ -201,15 +189,16 @@ def test_draw_and_save(exemplary_image):
         assert np.any(red_pixels), "The quadrilateral does not seem to be drawn on the image."
 
 
-def test_process_image(exemplary_image):
+def test_detect_and_draw_quadrilateral(exemplary_image):
     with tempfile.TemporaryDirectory() as temp_dir:
         input_file_path = os.path.join(temp_dir, "input.png")
         output_file_path = os.path.join(temp_dir, "output.png")
-
+        area_ground_truth = 1980.0
         cv2.imwrite(input_file_path, exemplary_image)
 
-        process_image(input_file_path, output_file_path)
+        calculated_area = detect_and_draw_quadrilateral(input_file_path, output_file_path)
         saved_img = cv2.imread(output_file_path)
 
         red_pixels = (saved_img[:, :, 2] == 255) & (saved_img[:, :, 1] == 0) & (saved_img[:, :, 0] == 0)
         assert np.any(red_pixels), "The quadrilateral does not seem to be drawn on the image."
+        assert calculated_area == area_ground_truth, "Area of quadrilateral differs from the ground truth."
