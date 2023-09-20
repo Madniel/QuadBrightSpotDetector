@@ -81,25 +81,32 @@ def get_selected_patches(sorted_patches: List, grid: np.ndarray, height: int, wi
     :param width: Image width.
     :return: Coordinates of selected patches.
     """
-    selected_coordinates = []
+    selected_coordinates = np.empty((len(sorted_patches), 2), dtype=int)
+    num_selected = 0
+
+    height_factor = height // KERNEL_SIZE
+    width_factor = width // KERNEL_SIZE
 
     for coordinates, _ in sorted_patches:
         patch_column = coordinates[0] // KERNEL_SIZE
         patch_row = coordinates[1] // KERNEL_SIZE
 
-        y_start, y_end = max(patch_row - MIN_DISTANCE_PREVENT_OVERLAP, 0), min(
-            patch_row + MIN_DISTANCE_PREVENT_OVERLAP + 1, height // KERNEL_SIZE)
-        x_start, x_end = max(patch_column - MIN_DISTANCE_PREVENT_OVERLAP, 0), min(
-            patch_column + MIN_DISTANCE_PREVENT_OVERLAP + 1, width // KERNEL_SIZE)
+        x_start = max(patch_column - MIN_DISTANCE_PREVENT_OVERLAP, 0)
+        x_end = min(patch_column + MIN_DISTANCE_PREVENT_OVERLAP + 1, width_factor)
+
+        y_start = max(patch_row - MIN_DISTANCE_PREVENT_OVERLAP, 0)
+        y_end = min(patch_row + MIN_DISTANCE_PREVENT_OVERLAP + 1, height_factor)
 
         if not np.any(grid[y_start:y_end, x_start:x_end]):
-            selected_coordinates.append(coordinates)
+            selected_coordinates[num_selected] = coordinates
+            num_selected += 1
+
             grid[y_start:y_end, x_start:x_end] = True
 
-            if len(selected_coordinates) == NUM_TOP_BRIGHT_PATCHES:
+            if num_selected == NUM_TOP_BRIGHT_PATCHES:
                 break
 
-    return get_points_sort_around_centroid(np.array(selected_coordinates, dtype=int))
+    return get_points_sort_around_centroid(selected_coordinates)
 
 
 def get_grid(height: int, width: int) -> np.ndarray:
