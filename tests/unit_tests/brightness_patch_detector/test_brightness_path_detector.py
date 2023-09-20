@@ -46,27 +46,31 @@ def test_get_patch_centers_and_brightness(exemplary_image):
 
 
 def test_get_patches_sorted_by_brightness(exemplary_image):
-    sorted_patches = get_patches_sorted_by_brightness(exemplary_image)
+    sorted_patch_centers = get_patches_sorted_by_brightness(exemplary_image)
 
-    brightness_values = [patch[1] for patch in sorted_patches]
-    assert all(brightness_values[i] >= brightness_values[i + 1] for i in range(len(brightness_values) - 1))
+    sorted_points_brightness = sorted(get_patch_centers_and_brightness(exemplary_image),
+                                      key=lambda x: x[1],
+                                      reverse=True)
+    expected_sorted_ground_truth = [patch[0] for patch in sorted_points_brightness]
+    assert sorted_patch_centers == expected_sorted_ground_truth, \
+        f"Expected {expected_sorted_ground_truth}, but got {sorted_patch_centers}"
 
 
 def test_get_centroid():
     square = np.array([[0, 0], [0, 2], [2, 2], [2, 0]])
-    square_center = [1, 1]
+    square_center = np.array([1, 1])
     centroid = get_centroid(square)
     assert np.allclose(centroid, square_center), f"Expected {square_center}, but got {centroid}"
 
     triangle = np.array([[0, 0], [0, 2], [2, 0]])
-    triangle_center = [2 / 3, 2 / 3]
+    triangle_center = np.array([2 / 3, 2 / 3])
     centroid = get_centroid(triangle)
     assert np.allclose(centroid, triangle_center), f"Expected {triangle_center}, but got {centroid}"
 
     random_points = np.random.rand(10, 2)
     coordinates_number_ground_truth = 2
     centroid = get_centroid(random_points)
-    centroid_coordinates_number = len(centroid.shape)
+    centroid_coordinates_number = len(centroid)
 
     assert centroid_coordinates_number == coordinates_number_ground_truth, "Centroid should have 2 coordinates"
     assert 0 <= centroid[0] <= 1, "Centroid x-coordinate out of bounds"
@@ -103,7 +107,7 @@ def test_get_points_sort_around_centroid():
 def test_get_selected_patches(exemplary_image):
     sorted_patches = get_patches_sorted_by_brightness(image=exemplary_image)
 
-    selected_patches = get_selected_patches(sorted_patches=sorted_patches)
+    selected_patches = get_selected_patches(image=exemplary_image, sorted_patches=sorted_patches)
 
     expected_center_patch = np.array([47, 47])
 
@@ -116,12 +120,12 @@ def test_get_selected_patches(exemplary_image):
 
     sorted_patches = get_patches_sorted_by_brightness(image=exemplary_image)
 
-    selected_patches = get_selected_patches(sorted_patches=sorted_patches)
+    selected_patches = get_selected_patches(image=exemplary_image, sorted_patches=sorted_patches)
 
     expected_patches = np.array([[12, 12],
                                  [12, 87],
                                  [87, 12],
-                                 [47, 47]])
+                                 [87, 87]])
     assert np.all(np.isin(expected_patches, selected_patches)), f"Expected patches not found in selected patches"
 
 
