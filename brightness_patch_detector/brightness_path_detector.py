@@ -46,7 +46,8 @@ def get_patches_sorted_by_brightness(image: np.ndarray, height: int, width: int)
     :param width: Image width.
     :return: List of patches sorted by brightness.
     """
-    return sorted(get_patch_centers_and_brightness(image, height, width), key=lambda x: x[1], reverse=True)
+    sorted_patches = sorted(get_patch_centers_and_brightness(image, height, width), key=lambda x: x[1], reverse=True)
+    return [patch[0] for patch in sorted_patches]
 
 
 def get_centroid(points: np.ndarray) -> np.ndarray:
@@ -87,7 +88,7 @@ def get_selected_patches(sorted_patches: List, grid: np.ndarray, height: int, wi
     height_factor = height // KERNEL_SIZE
     width_factor = width // KERNEL_SIZE
 
-    for coordinates, _ in sorted_patches:
+    for coordinates in sorted_patches:
         patch_column = coordinates[0] // KERNEL_SIZE
         patch_row = coordinates[1] // KERNEL_SIZE
 
