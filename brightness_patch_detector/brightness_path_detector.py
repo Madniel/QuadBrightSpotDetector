@@ -94,7 +94,12 @@ def draw_and_save(image: np.ndarray, points: np.ndarray, output_path: str) -> No
     points = points.reshape((1, -1, 1, 2))
 
     cv2.polylines(image_colored, points, isClosed=True, color=(0, 0, 255), thickness=2)
-    cv2.imwrite(output_path, image_colored)
+    success = cv2.imwrite(output_path, image_colored)
+
+    if success:
+        print(f"The image was saved successfully as {output_path}")
+    else:
+        print(f"Failed to save the image as {output_path}")
 
 
 @error_handler
