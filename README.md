@@ -5,7 +5,7 @@ Write a Python script that reads an image from a file as grayscale, and finds th
 ####  
 Folder contains:
 - Library brightness_patch_detector responsible for processing image for following task
-- scripts contain script run_brightness_patch_detector responsible for running task in command line. Script require two arguments: image_path and output_path. \
-  Exemplary command: python brightness_patch_detector.py <path_to_image> <output_image_path>
+- scripts contain script ***run_brightness_patch_detector*** responsible for running task in command line. Script require two arguments: image_path and output_path. \
+  Exemplary command: ***python brightness_patch_detector.py <path_to_image> <output_image_path>***
 - tests contains integral test, unit tests and resources to tests
 - utils contains decorator for error handling
