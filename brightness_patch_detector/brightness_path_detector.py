@@ -8,7 +8,7 @@ from utils.decorators import error_handler
 KERNEL_SIZE = 5
 NUM_TOP_BRIGHT_PATCHES = 4
 PATCH_CENTER_OFFSET = KERNEL_SIZE // 2
-MIN_DISTANCE = 1
+MIN_DISTANCE_PREVENT_OVERLAP = KERNEL_SIZE - 1
 
 
 def get_average_brightness(image: np.ndarray, x: int, y: int) -> float:
@@ -42,8 +42,8 @@ def get_selected_patches(sorted_patches: List, grid: np.ndarray, height: int, wi
         patch_column = coordinates[0] // KERNEL_SIZE
         patch_row = coordinates[1] // KERNEL_SIZE
 
-        y_start, y_end = max(patch_row - MIN_DISTANCE, 0), min(patch_row + MIN_DISTANCE + 1, height // KERNEL_SIZE)
-        x_start, x_end = max(patch_column - MIN_DISTANCE, 0), min(patch_column + MIN_DISTANCE + 1, width // KERNEL_SIZE)
+        y_start, y_end = max(patch_row - MIN_DISTANCE_PREVENT_OVERLAP, 0), min(patch_row + MIN_DISTANCE_PREVENT_OVERLAP + 1, height // KERNEL_SIZE)
+        x_start, x_end = max(patch_column - MIN_DISTANCE_PREVENT_OVERLAP, 0), min(patch_column + MIN_DISTANCE_PREVENT_OVERLAP + 1, width // KERNEL_SIZE)
 
         if not np.any(grid[y_start:y_end, x_start:x_end]):
             selected_coordinates.append(coordinates)
