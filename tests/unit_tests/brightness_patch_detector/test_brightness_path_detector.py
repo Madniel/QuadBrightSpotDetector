@@ -54,20 +54,21 @@ def test_get_patches_sorted_by_brightness(exemplary_image):
 
 def test_get_centroid():
     square = np.array([[0, 0], [0, 2], [2, 2], [2, 0]])
-
+    square_center = [1, 1]
     centroid = get_centroid(square)
-    assert np.allclose(centroid, [1, 1]), f"Expected [1, 1], but got {centroid}"
+    assert np.allclose(centroid, square_center), f"Expected {square_center}, but got {centroid}"
 
     triangle = np.array([[0, 0], [0, 2], [2, 0]])
-
+    triangle_center = [2 / 3, 2 / 3]
     centroid = get_centroid(triangle)
-    expected_centroid = [2 / 3, 2 / 3]
-    assert np.allclose(centroid, expected_centroid), f"Expected {expected_centroid}, but got {centroid}"
+    assert np.allclose(centroid, triangle_center), f"Expected {triangle_center}, but got {centroid}"
 
     random_points = np.random.rand(10, 2)
+    coordinates_number_ground_truth = 2
     centroid = get_centroid(random_points)
+    centroid_coordinates_number = len(centroid.shape)
 
-    assert centroid.shape == (2,), "Centroid should have 2 coordinates"
+    assert centroid_coordinates_number == coordinates_number_ground_truth, "Centroid should have 2 coordinates"
     assert 0 <= centroid[0] <= 1, "Centroid x-coordinate out of bounds"
     assert 0 <= centroid[1] <= 1, "Centroid y-coordinate out of bounds"
 

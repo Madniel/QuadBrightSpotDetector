@@ -26,5 +26,5 @@ def test_process_image():
         assert processed_img is not None, "Unable to load the processed image."
         assert ground_truth_img is not None, "Unable to load the ground truth image."
 
-        difference = np.abs(processed_img.astype(int) - ground_truth_img.astype(int))
-        assert np.sum(difference) == 0, "Processed image differs from the ground truth."
+        difference = np.sum(np.abs(processed_img.astype(int) - ground_truth_img.astype(int)))
+        assert difference == 0, "Processed image differs from the ground truth."
