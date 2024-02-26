@@ -1,8 +1,4 @@
-# 📷 Amphiprion Task
-
-This repository hosts a coding challenge from the Amphiprion company.
-
----
+# 📷 QuadBrightSpotDetector
 
 ### Task Description
 
