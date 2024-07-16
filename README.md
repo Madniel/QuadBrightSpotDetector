@@ -72,7 +72,7 @@ Execute the script via the command line, specifying paths for both the input and
 
 ```bash
 #!/usr/bin/python3
-python run_brightness_patch_detector.py <path_to_image> --output <output_image_path> 
+python scripts/run_brightness_patch_detector.py <path_to_image> --output <output_image_path> 
 ```
 
 - **path_to_image**: The path to your grayscale image that you want to process.
