@@ -1,9 +1,11 @@
-from typing import List
+from typing import List, Tuple
 
 import cv2
 import numpy as np
 
 from utils.decorators import error_handler
+from utils.exceptions import ImageProcessingError
+from utils.patch import Patch
 
 KERNEL_SIZE = 5
 NUM_TOP_BRIGHT_PATCHES = 4
@@ -23,7 +25,7 @@ def get_average_brightness(image: np.ndarray, x: int, y: int) -> float:
     return float(np.mean(image[y:y + KERNEL_SIZE, x:x + KERNEL_SIZE]))
 
 
-def get_patch_centers_and_brightness(image: np.ndarray) -> List:
+def get_patch_centers_and_brightness(image: np.ndarray) -> List[Patch]:
     """
     Get center coordinates and average brightness for all patches.
 
@@ -31,9 +33,17 @@ def get_patch_centers_and_brightness(image: np.ndarray) -> List:
     :return: List of center coordinates and corresponding brightness values.
     """
     height, width = image.shape
-    return [((x + PATCH_CENTER_OFFSET, y + PATCH_CENTER_OFFSET), get_average_brightness(image, x, y))
-            for x in range(width - KERNEL_SIZE)
-            for y in range(height - KERNEL_SIZE)]
+    patch_center_offset = KERNEL_SIZE // 2
+    patches = []
+
+    for y in range(height - KERNEL_SIZE):
+        for x in range(width - KERNEL_SIZE):
+            center_x = x + patch_center_offset
+            center_y = y + patch_center_offset
+            brightness = get_average_brightness(image, x, y)
+            patches.append(Patch(center=(center_x, center_y), brightness=brightness))
+
+    return patches
 
 
 def get_patches_sorted_by_brightness(image: np.ndarray) -> List:
@@ -43,9 +53,9 @@ def get_patches_sorted_by_brightness(image: np.ndarray) -> List:
     :param image: Input image.
     :return: List of patches sorted by brightness.
     """
-
-    sorted_patches = sorted(get_patch_centers_and_brightness(image), key=lambda x: x[1], reverse=True)
-    return [patch[0] for patch in sorted_patches]
+    patches = get_patch_centers_and_brightness(image)
+    sorted_patches = sorted(patches, key=lambda patch: patch.brightness, reverse=True)
+    return [patch.center for patch in sorted_patches]
 
 
 def get_centroid(points: np.ndarray) -> np.ndarray:
@@ -70,7 +80,41 @@ def get_points_sort_around_centroid(points: np.ndarray) -> np.ndarray:
     return points[np.argsort(angles)]
 
 
-def get_selected_patches(image: np.ndarray, sorted_patches: List) -> np.ndarray:
+def patch_coordinates_within_bounds(coordinates: Tuple[int, int],
+                                    width_factor: int,
+                                    height_factor: int) -> Tuple[int, int, int, int]:
+    """
+    Calculate the bounds for checking overlap.
+
+    :param coordinates: Coordinates of the point
+    :param width_factor: Factor of image width by kernel size.
+    :param height_factor: Factor of image height by kernel size.
+    :return: Tuple of start and end coordinates for both x and y directions.
+    """
+    patch_col = coordinates[0] // KERNEL_SIZE
+    patch_row = coordinates[1] // KERNEL_SIZE
+    x_start = max(patch_col - MIN_DISTANCE_PREVENT_OVERLAP, 0)
+    x_end = min(patch_col + MIN_DISTANCE_PREVENT_OVERLAP + 1, width_factor)
+    y_start = max(patch_row - MIN_DISTANCE_PREVENT_OVERLAP, 0)
+    y_end = min(patch_row + MIN_DISTANCE_PREVENT_OVERLAP + 1, height_factor)
+    return x_start, x_end, y_start, y_end
+
+
+def is_place_patch_possible(grid: np.ndarray, x_start: int, x_end: int, y_start: int, y_end: int) -> bool:
+    """
+    Check if a patch can be placed at the specified location.
+
+    :param grid: Grid tracking selected patches.
+    :param x_start: Start x-coordinate.
+    :param x_end: End x-coordinate.
+    :param y_start: Start y-coordinate.
+    :param y_end: End y-coordinate.
+    :return: Boolean indicating if patch can be placed.
+    """
+    return not np.any(grid[y_start:y_end, x_start:x_end])
+
+
+def get_selected_patches(image: np.ndarray, sorted_patches: List[Tuple[int, int]]) -> np.ndarray:
     """
     Select patches ensuring they don't overlap.
 
@@ -79,33 +123,24 @@ def get_selected_patches(image: np.ndarray, sorted_patches: List) -> np.ndarray:
     :return: Coordinates of selected patches.
     """
     grid = get_grid(image)
-    height, width = image.shape
-    selected_coordinates = np.empty((len(sorted_patches), 2), dtype=int)
-    num_selected = 0
-
-    height_factor = height // KERNEL_SIZE
-    width_factor = width // KERNEL_SIZE
+    selected_coordinates = []
+    height_factor = image.shape[0] // KERNEL_SIZE
+    width_factor = image.shape[1] // KERNEL_SIZE
 
     for coordinates in sorted_patches:
-        patch_column = coordinates[0] // KERNEL_SIZE
-        patch_row = coordinates[1] // KERNEL_SIZE
+        x_start, x_end, y_start, y_end = patch_coordinates_within_bounds(coordinates,
+                                                                         width_factor,
+                                                                         height_factor)
 
-        x_start = max(patch_column - MIN_DISTANCE_PREVENT_OVERLAP, 0)
-        x_end = min(patch_column + MIN_DISTANCE_PREVENT_OVERLAP + 1, width_factor)
-
-        y_start = max(patch_row - MIN_DISTANCE_PREVENT_OVERLAP, 0)
-        y_end = min(patch_row + MIN_DISTANCE_PREVENT_OVERLAP + 1, height_factor)
-
-        if not np.any(grid[y_start:y_end, x_start:x_end]):
-            selected_coordinates[num_selected] = coordinates
-            num_selected += 1
-
+        if is_place_patch_possible(grid, x_start, x_end, y_start, y_end):
+            selected_coordinates.append(coordinates)
             grid[y_start:y_end, x_start:x_end] = True
 
-            if num_selected == NUM_TOP_BRIGHT_PATCHES:
+            if len(selected_coordinates) == NUM_TOP_BRIGHT_PATCHES:
                 break
 
-    return get_points_sort_around_centroid(selected_coordinates[:num_selected])
+    selected_coordinates_array = np.array(selected_coordinates, dtype=int)
+    return get_points_sort_around_centroid(selected_coordinates_array)
 
 
 def get_grid(image: np.ndarray) -> np.ndarray:
@@ -132,9 +167,9 @@ def get_top_patches(image: np.ndarray) -> np.ndarray:
     return get_selected_patches(image=image, sorted_patches=patches_sorted_by_brightness)
 
 
-def get_area_using_shoelace_formula(x_coordinates: np.ndarray, y_coordinates: np.ndarray) -> float:
+def get_area_of_quadrilateral(x_coordinates: np.ndarray, y_coordinates: np.ndarray) -> float:
     """
-    Calculate area using the shoelace formula.
+    Calculate area  of a quadrilateral using the shoelace formula.
 
     :param x_coordinates: x-coordinates of the polygon vertices.
     :param y_coordinates: y-coordinates of the polygon vertices.
@@ -146,39 +181,44 @@ def get_area_using_shoelace_formula(x_coordinates: np.ndarray, y_coordinates: np
     return 0.5 * abs(np.sum(forward_diagonal_product - backward_diagonal_product))
 
 
-def get_area_of_quadrilateral(points: np.ndarray) -> float:
+def get_image_with_polygon(image: np.ndarray, points: np.ndarray) -> np.ndarray:
     """
-    Compute the area of a quadrilateral defined by given points.
-
-    :param points: Coordinates of the quadrilateral vertices.
-    :return: Area of the quadrilateral.
-    """
-    height_coordinates = points[:, 0]
-    width_coordinates = points[:, 1]
-
-    return get_area_using_shoelace_formula(height_coordinates, width_coordinates)
-
-
-def draw_and_save(image: np.ndarray, points: np.ndarray, output_path: str) -> None:
-    """
-    Draw a polygon on the image and save the result.
+    Draw a polygon on the image.
 
     :param image: Input image.
     :param points: Coordinates of the polygon vertices.
-    :param output_path: Path to save the output image.
     """
-    image_copy = image.copy()
-    image_colored = cv2.cvtColor(image_copy, cv2.COLOR_GRAY2BGR)
-
+    image_colored = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
     points = points.reshape((1, -1, 1, 2))
-
     cv2.polylines(image_colored, points, isClosed=True, color=(0, 0, 255), thickness=2)
-    success = cv2.imwrite(output_path, image_colored)
+    return image_colored
 
-    if success:
-        print(f"The image was saved successfully as {output_path}")
-    else:
-        print(f"Failed to save the image as {output_path}")
+
+def get_image_from_file(image_path: str):
+    """
+    Read an image from a given path in grayscale.
+
+    :param image_path: Path to the input image.
+    :return: Grayscale image.
+    :raises ImageProcessingError: If the image cannot be read.
+    """
+    gray_image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    if gray_image is None:
+        raise ImageProcessingError(f"Could not read image from path {image_path}. Please check the path and try again.")
+    return gray_image
+
+
+def save_image_to_file(output_path: str, image) -> None:
+    """
+    Save an image to a given path.
+
+    :param output_path: Path to save the processed image.
+    :param image: Image to save.
+    :raises ImageProcessingError: If the image cannot be saved.
+    """
+    is_image_saved = cv2.imwrite(output_path, image)
+    if not is_image_saved:
+        raise ImageProcessingError(f"Failed to save the image as {output_path}")
 
 
 @error_handler
@@ -190,12 +230,10 @@ def draw_quadrilateral_and_calculate_area(image_path: str, output_path: str) -> 
     :param output_path: Path to save the processed image.
     :return: Area of the quadrilateral.
     """
-    gray_image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-
-    if gray_image is None:
-        print(f"Error: Could not read image from path {image_path}. Please check the path and try again.")
-        return -1.0
-
+    gray_image = get_image_from_file(image_path)
     top_patches = get_top_patches(gray_image)
-    draw_and_save(gray_image, top_patches, output_path)
-    return get_area_of_quadrilateral(top_patches)
+    image_colored = get_image_with_polygon(gray_image, top_patches)
+    save_image_to_file(output_path, image_colored)
+    height_coordinates = top_patches[:, 0]
+    width_coordinates = top_patches[:, 1]
+    return get_area_of_quadrilateral(height_coordinates, width_coordinates)

@@ -5,8 +5,8 @@ import cv2
 import numpy as np
 import pytest
 
-from brightness_patch_detector.brightness_path_detector import get_top_patches, get_area_of_quadrilateral, \
-    draw_and_save, get_average_brightness, get_patch_centers_and_brightness, get_area_using_shoelace_formula, \
+from brightness_patch_detector.brightness_path_detector import get_top_patches, \
+    get_image_with_polygon, get_average_brightness, get_patch_centers_and_brightness, get_area_of_quadrilateral, \
     get_patches_sorted_by_brightness, \
     get_centroid, get_points_sort_around_centroid, get_grid, get_selected_patches, draw_quadrilateral_and_calculate_area
 
@@ -49,9 +49,9 @@ def test_get_patches_sorted_by_brightness(exemplary_image):
     sorted_patch_centers = get_patches_sorted_by_brightness(exemplary_image)
 
     sorted_points_brightness = sorted(get_patch_centers_and_brightness(exemplary_image),
-                                      key=lambda x: x[1],
+                                      key=lambda x: x.brightness,
                                       reverse=True)
-    expected_sorted_ground_truth = [patch[0] for patch in sorted_points_brightness]
+    expected_sorted_ground_truth = [patch.center for patch in sorted_points_brightness]
     assert sorted_patch_centers == expected_sorted_ground_truth, \
         f"Expected {expected_sorted_ground_truth}, but got {sorted_patch_centers}"
 
@@ -148,49 +148,35 @@ def test_get_top_patches(exemplary_image):
     assert exemplary_patch in top_patches
 
 
-def test_get_area_using_shoelace_formula():
+def test_get_area_of_quadrilateral():
     square_area = 4.0
     x_coordinates = np.array([1, 1, 3, 3])
     y_coordinates = np.array([1, 3, 3, 1])
 
-    area = get_area_using_shoelace_formula(x_coordinates, y_coordinates)
+    area = get_area_of_quadrilateral(x_coordinates, y_coordinates)
     assert area == square_area, f"Expected 4, but got {square_area}"
 
     rectangle_area = 12.0
     x_coordinates = np.array([2, 2, 6, 6])
     y_coordinates = np.array([1, 4, 4, 1])
 
-    area = get_area_using_shoelace_formula(x_coordinates, y_coordinates)
+    area = get_area_of_quadrilateral(x_coordinates, y_coordinates)
     assert area == rectangle_area, f"Expected 12, but got {rectangle_area}"
 
     triangle_area = 6.0
     x_coordinates = np.array([1, 1, 5])
     y_coordinates = np.array([1, 4, 1])
 
-    area = get_area_using_shoelace_formula(x_coordinates, y_coordinates)
+    area = get_area_of_quadrilateral(x_coordinates, y_coordinates)
     assert area == triangle_area, f"Expected 6, but got {triangle_area}"
 
 
-def test_area_of_quadrilateral():
-    square_corners = np.array([[0, 0], [0, 2], [2, 2], [2, 0]])
-    square_area_ground_truth = 4.0
-    assert get_area_of_quadrilateral(square_corners) == square_area_ground_truth
-
-    rectangle_corners = np.array([[0, 0], [0, 2], [1, 2], [1, 0]])
-    rectangle_area_ground_truth = 2.0
-    assert get_area_of_quadrilateral(rectangle_corners) == rectangle_area_ground_truth
-
-
-def test_draw_and_save(exemplary_image):
+def test_get_image_with_polygon(exemplary_image):
     quadrilateral_corners = np.array([[10, 10], [90, 10], [90, 90], [10, 90]])
+    image_colored = get_image_with_polygon(exemplary_image, quadrilateral_corners)
+    red_pixels = (image_colored[:, :, 2] == 255) & (image_colored[:, :, 1] == 0) & (image_colored[:, :, 0] == 0)
 
-    with tempfile.TemporaryDirectory() as temp_dir:
-        output_file_path = os.path.join(temp_dir, "output.png")
-        draw_and_save(exemplary_image, quadrilateral_corners, output_file_path)
-        saved_image = cv2.imread(output_file_path)
-        red_pixels = (saved_image[:, :, 2] == 255) & (saved_image[:, :, 1] == 0) & (saved_image[:, :, 0] == 0)
-
-        assert np.any(red_pixels), "The quadrilateral does not seem to be drawn on the image."
+    assert np.any(red_pixels), "The quadrilateral does not seem to be drawn on the image."
 
 
 def test_draw_quadrilateral_and_calculate_area(exemplary_image):
