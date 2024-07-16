@@ -33,7 +33,6 @@ if __name__ == "__main__":
         print("Usage: python brightness_patch_detector.py <path_to_image> [--output <output_image_path>]")
         sys.exit(1)
 
-    args = parser.parse_args()
     image_path = args.image_path
     output_path = args.output_path
     calculated_area = draw_quadrilateral_and_calculate_area(image_path, output_path)
